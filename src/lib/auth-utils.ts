@@ -1,0 +1,192 @@
+import { User } from "@/types/api.types";
+
+// Define permission types
+export type Permission = string;
+
+// Role-based permissions mapping
+export const ROLE_PERMISSIONS = {
+  user: [
+    "reports.create",
+    "reports.read.own",
+    "transactions.read.own",
+    "transactions.create",
+    "incidents.read",
+    "profile.read",
+    "profile.update",
+    "topup.create",
+  ],
+  staff: [
+    "reports.create",
+    "reports.read.all",
+    "reports.update.all",
+    "transactions.read.all",
+    "transactions.create",
+    "transactions.update",
+    "incidents.create",
+    "incidents.read.all",
+    "incidents.update.own",
+    "profile.read",
+    "profile.update",
+    "topup-requests.read.all",
+    "settlements.read.all",
+    "create.notification",
+    "manage.notification_templates",
+    "view.notification_analytics",
+    "topup.create",
+    "transactions.read.own",
+  ],
+  admin: [
+    "reports.create",
+    "reports.read.all",
+    "reports.update.all",
+    "reports.delete.all",
+    "reports.verify",
+    "transactions.read.all",
+    "transactions.create",
+    "transactions.update",
+    "transactions.delete",
+    "incidents.create",
+    "incidents.read.all",
+    "incidents.update.all",
+    "incidents.delete.all",
+    "users.create",
+    "users.read.all",
+    "users.update.all",
+    "users.delete.all",
+    "roles.assign",
+    "profile.read",
+    "profile.update",
+    "system.settings",
+    "topup-requests.read.all",
+    "topup-requests.update",
+    "settlements.read.all",
+    "settlements.create",
+    "operators.read.all",
+    "operators.create",
+    "operators.update",
+    "suppliers.read.all",
+    "suppliers.create",
+    "suppliers.update",
+    "products.read.all",
+    "products.create",
+    "products.update",
+    "create.notification",
+    "manage.notification_templates",
+    "view.notification_analytics",
+    "offer.create",
+    "offer.read",
+    "offer.update",
+    "offer.delete",
+    "offer.admin",
+    "offer.redeem",
+    "topup.create",
+  ],
+};
+
+// Permission descriptions for documentation
+export const PERMISSION_DESCRIPTIONS = {
+  "reports.create": "Create new election reports",
+  "reports.read.own": "View own election reports",
+  "reports.read.all": "View all election reports",
+  "reports.read.public": "View public election reports",
+  "reports.update.own": "Update own election reports",
+  "reports.update.all": "Update all election reports",
+  "reports.delete.own": "Delete own election reports",
+  "reports.delete.all": "Delete all election reports",
+  "reports.verify": "Verify election reports",
+  "incidents.create": "Create new incidents",
+  "incidents.read.all": "View all incidents",
+  "incidents.read.public": "View public incidents",
+  "incidents.update.own": "Update own incidents",
+  "incidents.update.all": "Update all incidents",
+  "incidents.delete.all": "Delete all incidents",
+  "users.create": "Create new users",
+  "users.read.all": "View all users",
+  "users.update.all": "Update all users",
+  "users.delete.all": "Delete all users",
+  "roles.assign": "Assign roles to users",
+  "profile.read": "View own profile",
+  "profile.update": "Update own profile",
+  "system.settings": "Manage system settings",
+  "topup-requests.read.all": "View all topup requests",
+  "topup-requests.update": "Update topup requests",
+  "settlements.read.all": "View all settlements",
+  "settlements.create": "Create new settlements",
+  "operators.read.all": "View all operators",
+  "operators.create": "Create new operators",
+  "operators.update": "Update operators",
+  "suppliers.read.all": "View all suppliers",
+  "suppliers.create": "Create new suppliers",
+  "suppliers.update": "Update suppliers",
+  "products.read.all": "View all products",
+  "products.create": "Create new products",
+  "products.update": "Update products",
+  "create.notification": "Create and send notifications to users",
+  "manage.notification_templates": "Manage notification templates",
+  "view.notification_analytics": "View notification analytics",
+  "offer.create": "Create new offers",
+  "offer.read": "Read offers",
+  "offer.update": "Update offers",
+  "offer.delete": "Delete offers",
+  "offer.admin": "Administer offers",
+  "offer.redeem": "Redeem offers",
+  "topup.create": "Create new topup requests",
+  "topup.read": "Read topup requests",
+  "topup.update": "Update topup requests",
+  "topup.delete": "Delete topup requests",
+};
+
+// Check if user has a specific permission
+export const hasPermission = (
+  user: User | null,
+  permission: Permission
+): boolean => {
+  if (!user) return false;
+
+  // If user has explicit permissions, check against them
+  if (user.permissions && user.permissions.length > 0) {
+    return user.permissions.includes(permission);
+  }
+
+  // Otherwise, check role-based permissions
+  const userRole = user.role;
+  const permissionsForRole =
+    ROLE_PERMISSIONS[userRole as keyof typeof ROLE_PERMISSIONS] || [];
+  return permissionsForRole.includes(permission);
+};
+
+// Check if user has any of the required permissions
+export const hasAnyPermission = (
+  user: User | null,
+  permissions: Permission[]
+): boolean => {
+  return permissions.some((permission) => hasPermission(user, permission));
+};
+
+// Check if user has all of the required permissions
+export const hasAllPermissions = (
+  user: User | null,
+  permissions: Permission[]
+): boolean => {
+  return permissions.every((permission) => hasPermission(user, permission));
+};
+
+// Check user role
+export const hasRole = (user: User | null, role: string): boolean => {
+  return user?.role === role;
+};
+
+// Check if user is admin
+export const isAdmin = (user: User | null): boolean => {
+  return hasRole(user, "admin");
+};
+
+// Check if user is suspended
+export const isSuspended = (user: User | null): boolean => {
+  return user?.isSuspended === true;
+};
+
+// Check if user is verified
+export const isVerified = (user: User | null): boolean => {
+  return user?.isVerified === true;
+};

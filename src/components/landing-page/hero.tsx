@@ -1,0 +1,104 @@
+import { Button } from "@/components/ui/button";
+import { Phone, Wifi } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+
+export function Hero() {
+  return (
+    <section className="w-full">
+      {/* Mobile View */}
+      <div className="relative flex min-h-[600px] items-center bg-cover bg-center md:hidden">
+        <Image
+          src="/images/hero-background.jpg"
+          alt="Hero Background"
+          fill
+          className="z-0 object-cover object-center"
+          priority
+          sizes="100vw"
+        />
+        <div className="absolute inset-0 z-1 bg-black/50" />
+        <div className="relative z-10 w-full px-4 sm:px-6">
+          <div className="mx-auto max-w-xl text-center">
+            <div className="flex flex-col items-center space-y-6">
+              <h1 className="text-3xl leading-tight font-bold text-white sm:text-4xl">
+                Your Instant Hub for Data, Airtime, and Bill Payments in
+                Nigeria.
+              </h1>
+              <p className="text-base leading-relaxed text-white/90 sm:text-lg">
+                Get the cheapest data plans, top-up any network, pay your
+                KEDCO/DStv bills, and more. Fast, automated, and reliable.
+              </p>
+              <div className="flex flex-wrap justify-center gap-3">
+                <Button size="lg" className="gap-2 px-6 py-6 text-base" asChild>
+                  <Link href="/buy-data">
+                    <Wifi className="h-5 w-5" />
+                    Buy Data
+                  </Link>
+                </Button>
+                <Button
+                  size="lg"
+                  variant="secondary"
+                  className="gap-2 px-6 py-6 text-base"
+                  asChild
+                >
+                  <Link href="/buy-airtime">
+                    <Phone className="h-5 w-5" />
+                    Buy Airtime
+                  </Link>
+                </Button>
+              </div>
+              <p className="text-sm text-white/80">
+                Join 5,000+ satisfied customers.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop View */}
+      <div className="container mx-auto hidden grid-cols-1 items-center gap-8 px-4 py-20 sm:px-6 md:grid md:grid-cols-1 md:py-32 lg:px-8">
+        <div className="flex flex-col items-center space-y-6 text-center">
+          <h1 className="text-foreground text-3xl leading-tight font-bold sm:text-4xl md:text-5xl lg:text-6xl">
+            Your Instant Hub for Data, Airtime, and Bill Payments in Nigeria.
+          </h1>
+          <p className="text-muted-foreground text-base leading-relaxed sm:text-lg md:text-xl">
+            Get the cheapest data plans, top-up any network, pay your KEDCO/DStv
+            bills, and more. Fast, automated, and reliable.
+          </p>
+          <div className="flex flex-wrap justify-center gap-4">
+            <Button size="lg" className="gap-2 px-8 py-6 text-base" asChild>
+              <Link href="/buy-data">
+                <Wifi className="h-5 w-5" />
+                Buy Data
+              </Link>
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="gap-2 px-8 py-6 text-base"
+              asChild
+            >
+              <Link href="/buy-airtime">
+                <Phone className="h-5 w-5" />
+                Buy Airtime
+              </Link>
+            </Button>
+          </div>
+          <p className="text-muted-foreground text-sm md:text-base">
+            Join 5,000+ satisfied customers.
+          </p>
+        </div>
+        {/* <div className="flex items-center justify-center">
+          <Image
+            src="/images/hero-background.jpg"
+            alt="Hero Image"
+            width={600}
+            height={600}
+            className="h-auto max-h-[500px] w-full max-w-[500px] rounded-lg object-contain"
+            priority
+          />
+        </div> */}
+      </div>
+    </section>
+  );
+}

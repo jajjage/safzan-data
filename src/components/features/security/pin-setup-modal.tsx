@@ -1,0 +1,169 @@
+"use client";
+
+import { PinInput } from "@/components/pin-input";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useSetPin } from "@/hooks/useUser";
+import { useQueryClient } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+
+interface PinSetupModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: (pin?: string) => void;
+}
+
+export function PinSetupModal({
+  isOpen,
+  onClose,
+  onSuccess,
+}: PinSetupModalProps) {
+  const queryClient = useQueryClient();
+  const { mutate: setPinMutation, isPending: isLoading } = useSetPin();
+  const [pin, setPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const [error, setError] = useState<string>("");
+  const pinInputRef = useRef<HTMLInputElement>(null);
+  const confirmPinRef = useRef<HTMLInputElement>(null);
+
+  // Auto-focus first PIN input when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => {
+        pinInputRef.current?.focus();
+      }, 100);
+    }
+  }, [isOpen]);
+
+  const handlePinComplete = () => {
+    // Focus the confirm PIN input
+    setTimeout(() => {
+      confirmPinRef.current?.focus();
+    }, 100);
+  };
+
+  const handleSubmit = () => {
+    setError("");
+
+    if (!pin || pin.length !== 4) {
+      setError("PIN must be 4 digits");
+      return;
+    }
+
+    if (!confirmPin || confirmPin.length !== 4) {
+      setError("Confirm PIN must be 4 digits");
+      return;
+    }
+
+    if (pin !== confirmPin) {
+      setError("PINs do not match");
+      setConfirmPin("");
+      return;
+    }
+
+    // Call the mutation to set PIN in backend
+    setPinMutation(
+      { pin },
+      {
+        onSuccess: () => {
+          // Invalidate auth/user queries to refresh hasPin status
+          queryClient.invalidateQueries({ queryKey: ["auth", "current-user"] });
+          queryClient.invalidateQueries({ queryKey: ["user"] });
+
+          // Clear form and call parent's onSuccess callback
+          setPin("");
+          setConfirmPin("");
+          onSuccess();
+        },
+        onError: (error: any) => {
+          // Show backend error
+          setError(
+            error?.response?.data?.message ||
+              error?.message ||
+              "Failed to set PIN. Please try again."
+          );
+        },
+      }
+    );
+  };
+
+  const handleClose = () => {
+    if (!isLoading) {
+      setPin("");
+      setConfirmPin("");
+      setError("");
+      onClose();
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="w-full max-w-[calc(100%-2rem)] p-4 sm:max-w-md sm:rounded-2xl sm:p-6">
+        <DialogHeader>
+          <DialogTitle>Set Your Transaction PIN</DialogTitle>
+          <DialogDescription>
+            A Transaction PIN is required to authorize payments and withdrawals.
+            Please set a 4-digit PIN.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <label className="text-sm font-medium">New Transaction PIN</label>
+            <PinInput
+              ref={pinInputRef}
+              length={4}
+              value={pin}
+              onChange={setPin}
+              onComplete={handlePinComplete}
+              disabled={isLoading}
+              masked={true}
+            />
+          </div>
+
+          <div className="space-y-3">
+            <label className="text-sm font-medium">Confirm PIN</label>
+            <PinInput
+              ref={confirmPinRef}
+              length={4}
+              value={confirmPin}
+              onChange={setConfirmPin}
+              disabled={isLoading}
+              masked={true}
+            />
+          </div>
+
+          {error && <p className="text-sm text-red-500">{error}</p>}
+
+          <div className="flex gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={handleClose}
+              disabled={isLoading}
+            >
+              Skip for now
+            </Button>
+            <Button
+              type="button"
+              className="flex-1"
+              onClick={handleSubmit}
+              disabled={isLoading}
+            >
+              {isLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
+              Set PIN
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
