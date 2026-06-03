@@ -36,6 +36,7 @@ export interface User {
   virtualAccountNumber?: string;
   virtualAccountBankName?: string;
   virtualAccountAccountName?: string;
+  virtualAccounts?: VirtualAccount[];
   balance: string;
   cashback?: {
     availableBalance: number;
@@ -49,6 +50,16 @@ export interface User {
   hasPasscode: boolean; // Whether the user has set an app passcode (for soft lock)
   createdAt: string;
   updatedAt: string;
+}
+
+export interface VirtualAccount {
+  id: string;
+  accountNumber: string;
+  bankCode?: string | null;
+  bankName?: string | null;
+  accountName?: string | null;
+  providerVaId?: string | null;
+  providerName?: string | null;
 }
 
 // ============= Token Storage =============
