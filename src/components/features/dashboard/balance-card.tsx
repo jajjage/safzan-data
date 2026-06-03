@@ -175,7 +175,7 @@ export function BalanceCard({
               <span>Add Money</span>
             </Button>
           </DialogTrigger>
-          <DialogContent className="w-[340px] max-w-[95vw] p-0 sm:max-w-md">
+          <DialogContent className="max-h-[90vh] w-[340px] max-w-[95vw] overflow-y-auto p-0 sm:max-w-md">
             <DialogHeader className="px-4 pt-6 pb-2">
               <DialogTitle className="text-center">
                 {hasVirtualAccount ? "Add Money" : "Creating Virtual Account"}
