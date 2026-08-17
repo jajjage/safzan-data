@@ -20,17 +20,18 @@ const BASE_PATH = "/admin/users";
 
 // Helper to map API response (snake_case) to Frontend type (camelCase)
 const mapFromApiUser = (apiUser: any): AdminUser => {
+  const effectiveUserId = apiUser.userId || apiUser.id || apiUser.user_id || "";
   return {
-    id: apiUser.id,
-    userId: apiUser.user_id || apiUser.userId,
-    fullName: apiUser.full_name || apiUser.fullName,
-    email: apiUser.email,
-    phoneNumber: apiUser.phone_number || apiUser.phoneNumber,
-    role: apiUser.role,
-    isVerified: apiUser.is_verified || apiUser.isVerified,
-    isSuspended: apiUser.is_suspended || apiUser.isSuspended,
-    twoFactorEnabled: apiUser.two_factor_enabled || apiUser.twoFactorEnabled,
-    balance: apiUser.balance,
+    id: apiUser.id || effectiveUserId,
+    userId: effectiveUserId,
+    fullName: apiUser.full_name || apiUser.fullName || "",
+    email: apiUser.email || "",
+    phoneNumber: apiUser.phone_number || apiUser.phoneNumber || "",
+    role: apiUser.role || "",
+    isVerified: apiUser.is_verified ?? apiUser.isVerified ?? false,
+    isSuspended: apiUser.is_suspended ?? apiUser.isSuspended ?? false,
+    twoFactorEnabled: apiUser.two_factor_enabled ?? apiUser.twoFactorEnabled ?? false,
+    balance: apiUser.balance ?? "0",
     createdAt: apiUser.created_at || apiUser.createdAt,
     updatedAt: apiUser.updated_at || apiUser.updatedAt,
   };
@@ -162,6 +163,9 @@ export const adminUserService = {
   setup2FA: async (
     userId: string
   ): Promise<ApiResponse<AdminSetup2FAResponse>> => {
+    if (!userId || !userId.trim()) {
+      throw new Error("User ID is required");
+    }
     const response = await apiClient.post<ApiResponse<AdminSetup2FAResponse>>(
       `${BASE_PATH}/${userId}/2fa/setup`
     );
@@ -175,6 +179,9 @@ export const adminUserService = {
     userId: string,
     code: string
   ): Promise<ApiResponse<{ enabled: boolean }>> => {
+    if (!userId || !userId.trim()) {
+      throw new Error("User ID is required");
+    }
     const response = await apiClient.post<ApiResponse<{ enabled: boolean }>>(
       `${BASE_PATH}/${userId}/2fa/verify`,
       { code }
@@ -186,6 +193,9 @@ export const adminUserService = {
    * Disable 2FA for a user
    */
   disable2FA: async (userId: string): Promise<ApiResponse> => {
+    if (!userId || !userId.trim()) {
+      throw new Error("User ID is required");
+    }
     const response = await apiClient.post<ApiResponse>(
       `${BASE_PATH}/${userId}/2fa/disable`
     );
@@ -199,6 +209,9 @@ export const adminUserService = {
   enable2FA: async (
     userId: string
   ): Promise<ApiResponse<AdminSetup2FAResponse>> => {
+    if (!userId || !userId.trim()) {
+      throw new Error("User ID is required");
+    }
     const response = await apiClient.post<ApiResponse<AdminSetup2FAResponse>>(
       `${BASE_PATH}/${userId}/2fa/enable`
     );
@@ -211,6 +224,9 @@ export const adminUserService = {
   get2FAStatus: async (
     userId: string
   ): Promise<ApiResponse<{ enabled: boolean; roleRequires2FA?: boolean }>> => {
+    if (!userId || !userId.trim()) {
+      throw new Error("User ID is required");
+    }
     const response = await apiClient.get<
       ApiResponse<{ enabled: boolean; roleRequires2FA?: boolean }>
     >(`${BASE_PATH}/${userId}/2fa/status`);

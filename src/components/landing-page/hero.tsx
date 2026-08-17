@@ -30,7 +30,7 @@ export function Hero() {
               </p>
               <div className="flex flex-wrap justify-center gap-3">
                 <Button size="lg" className="gap-2 px-6 py-6 text-base" asChild>
-                  <Link href="/buy-data">
+                  <Link href="/register">
                     <Wifi className="h-5 w-5" />
                     Buy Data
                   </Link>
@@ -41,7 +41,7 @@ export function Hero() {
                   className="gap-2 px-6 py-6 text-base"
                   asChild
                 >
-                  <Link href="/buy-airtime">
+                  <Link href="/register">
                     <Phone className="h-5 w-5" />
                     Buy Airtime
                   </Link>
@@ -67,7 +67,7 @@ export function Hero() {
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Button size="lg" className="gap-2 px-8 py-6 text-base" asChild>
-              <Link href="/buy-data">
+              <Link href="/register">
                 <Wifi className="h-5 w-5" />
                 Buy Data
               </Link>
@@ -78,7 +78,7 @@ export function Hero() {
               className="gap-2 px-8 py-6 text-base"
               asChild
             >
-              <Link href="/buy-airtime">
+              <Link href="/register">
                 <Phone className="h-5 w-5" />
                 Buy Airtime
               </Link>
@@ -88,16 +88,6 @@ export function Hero() {
             Join 5,000+ satisfied customers.
           </p>
         </div>
-        {/* <div className="flex items-center justify-center">
-          <Image
-            src="/images/hero-background.jpg"
-            alt="Hero Image"
-            width={600}
-            height={600}
-            className="h-auto max-h-[500px] w-full max-w-[500px] rounded-lg object-contain"
-            priority
-          />
-        </div> */}
       </div>
     </section>
   );

@@ -42,6 +42,10 @@ export function Setup2FAModal({
   const enable2FAMutation = useEnable2FA();
 
   const handleEnable2FA = () => {
+    if (!userId || !userId.trim()) {
+      toast.error("User ID is missing. Cannot enable 2FA.");
+      return;
+    }
     enable2FAMutation.mutate(userId, {
       onSuccess: (response) => {
         setData(response.data ?? null);
