@@ -41,6 +41,10 @@ export function ProductListTable() {
 
   const allProducts = data?.data?.products || [];
   const operators = operatorsData?.data?.operators || [];
+  const productById = useMemo(
+    () => new Map(allProducts.map((product) => [product.id, product])),
+    [allProducts]
+  );
 
   // Client-side filtering for search, operator, and type
   const filteredProducts = useMemo(() => {
@@ -148,7 +152,36 @@ export function ProductListTable() {
                   <Badge variant="secondary">{product.productType}</Badge>
                 </TableCell>
                 <TableCell className="text-right font-medium">
-                  ₦{product.denomAmount?.toLocaleString()}
+                  <div className="space-y-1">
+                    <div>₦{product.denomAmount?.toLocaleString()}</div>
+                    <div className="text-muted-foreground text-[11px] leading-tight">
+                      U: ₦
+                      {(
+                        product.priceTags?.user ?? product.denomAmount
+                      )?.toLocaleString()}
+                      {" · "}R: ₦
+                      {(
+                        product.priceTags?.reseller ??
+                        product.priceTags?.user ??
+                        product.denomAmount
+                      )?.toLocaleString()}
+                      {" · "}API: ₦
+                      {(
+                        product.priceTags?.api ??
+                        product.priceTags?.reseller ??
+                        product.priceTags?.user ??
+                        product.denomAmount
+                      )?.toLocaleString()}
+                    </div>
+                    {product.bundleBaseProductId && (
+                      <div className="text-muted-foreground text-[11px] leading-tight">
+                        Bundle:{" "}
+                        {productById.get(product.bundleBaseProductId)?.name ||
+                          product.bundleBaseProductId}{" "}
+                        × {product.bundleRepeatCount || 2}
+                      </div>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {product.dataMb ? `${product.dataMb} MB` : "—"}
