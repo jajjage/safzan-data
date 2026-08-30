@@ -16,6 +16,10 @@ import { useTransaction } from "@/hooks/useWallet";
 import { detectNetworkProvider } from "@/lib/network-utils";
 import { useSecurityStore } from "@/store/securityStore";
 import { Product } from "@/types/product.types";
+import {
+  convertDenomAmountToNumber,
+  getResolvedProductPrice,
+} from "@/utils/reseller-products";
 import { useQueryClient } from "@tanstack/react-query";
 import { Grid, LayoutList } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -28,28 +32,38 @@ import { ProductCard } from "../shared/product-card";
 import { ShareTransactionDialog } from "../transactions/share-transaction-dialog";
 import { CategoryTabs } from "./category-tabs";
 
-export function DataPlans() {
+type DataPlansProps = {
+  productType?: string;
+  title?: string;
+  returnUrl?: string;
+};
+
+export function DataPlans({
+  productType = "data",
+  title = "Data Plans",
+  returnUrl = "/dashboard/data",
+}: DataPlansProps) {
   const router = useRouter();
+  const showCategories = productType === "data";
   const { user, refetch: refetchUser } = useAuth();
   const { recordPinAttempt, isBlocked: _isBlocked } = useSecurityStore();
   const topupMutation = useTopup();
   const queryClient = useQueryClient();
 
   const [selectedNetwork, setSelectedNetwork] = useState<string>("");
-  const [selectedCategory, setSelectedCategory] = useState<string>(""); // Will be set to first category from DB
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   // Fetch categories from API
   const { data: categories = [], isLoading: isCategoriesLoading } =
     useCategories();
 
-  // New State for Input & Detection
+  // State for Input & Detection
   const [phoneNumber, setPhoneNumber] = useState("");
   const [detectedNetwork, setDetectedNetwork] = useState<string | null>(null);
-  const [hasInitializedPhone, setHasInitializedPhone] = useState(false);
-  const [_networkMismatch, setNetworkMismatch] = useState(false); // Track if phone doesn't match selected network
+  const [_networkMismatch, setNetworkMismatch] = useState(false);
   const [isPhoneNumberExplicitlyEntered, setIsPhoneNumberExplicitlyEntered] =
-    useState(false); // Track if user explicitly typed/entered number
+    useState(false);
 
   // Modal State
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -60,9 +74,8 @@ export function DataPlans() {
   const [failureMessage, setFailureMessage] = useState("");
 
   const [errorMessage, setErrorMessage] = useState("");
-  // const [pinMode, setPinMode] = useState<"setup" | "enter">("enter")
 
-  // Verification Modal State - Biometric First, then PIN Fallback
+  // Verification Modal State
   const [showBiometricModal, setShowBiometricModal] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
   const [showPinSetupModal, setShowPinSetupModal] = useState(false);
@@ -79,29 +92,19 @@ export function DataPlans() {
   );
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
 
-  // Phone number is NOT auto-filled - user must enter it manually
-  // This ensures users are intentional about the recipient number
-
-  // Fetch all data products.
+  // Fetch products
   const { data, isLoading, error } = useProducts(
-    { productType: "data", isActive: true },
-    { staleTime: 5 * 60 * 1000 } // 5 minutes - allow offer updates to reflect
+    { productType, isActive: true },
+    { staleTime: 5 * 60 * 1000 }
   );
 
-  // Memoize products to prevent useMemo dependency issues
   const products = useMemo(() => data?.products || [], [data?.products]);
 
-  // Get user's eligible offers (Two-Request Merge pattern)
   const isGuest = !user;
   const { eligibleIds } = useEligibleOffers(!isGuest);
-
-  // Track selected offer ID for checkout
   const [selectedOfferId, setSelectedOfferId] = useState<string | null>(null);
-
-  // Get markup map for all suppliers
   const markupMap = useSupplierMarkupMap();
 
-  // Extract unique operators from products
   const operators = useMemo(() => {
     const uniqueOps = new Map<string, { name: string; logoUrl: string }>();
 
@@ -123,23 +126,18 @@ export function DataPlans() {
     });
   }, [products]);
 
-  // Set default selected network once operators are loaded
   useEffect(() => {
     if (!selectedNetwork && operators.length > 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: one-time initialization
       setSelectedNetwork(operators[0].name);
     }
   }, [operators, selectedNetwork]);
 
-  // Set default selected category to first category from DB
   useEffect(() => {
-    if (!selectedCategory && categories.length > 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: one-time initialization
+    if (showCategories && !selectedCategory && categories.length > 0) {
       setSelectedCategory(categories[0].slug);
     }
-  }, [categories, selectedCategory]);
+  }, [categories, selectedCategory, showCategories]);
 
-  // Handle Smart Network Detection - defined with useCallback before effects that use it
   const handleNetworkDetected = useCallback(
     (networkKey: string) => {
       const matchedOperator = operators.find((op) =>
@@ -149,31 +147,27 @@ export function DataPlans() {
       if (matchedOperator) {
         setDetectedNetwork(matchedOperator.name);
         setSelectedNetwork(matchedOperator.name);
-        setNetworkMismatch(false); // Clear mismatch when network auto-detected
+        setNetworkMismatch(false);
       }
     },
     [operators]
   );
 
-  // Auto-detect and navigate to operator when phone number changes
   useEffect(() => {
     if (phoneNumber && phoneNumber.length >= 4 && operators.length > 0) {
       const detectedOp = detectNetworkProvider(phoneNumber);
       if (detectedOp) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: derived state from phone number
         handleNetworkDetected(detectedOp);
       }
     }
   }, [phoneNumber, operators, handleNetworkDetected]);
 
-  // Handle Manual Network Selection with Warning
   const handleManualNetworkSelect = (networkName: string) => {
     if (
       detectedNetwork &&
       detectedNetwork !== networkName &&
       phoneNumber.length >= 4
     ) {
-      // Set mismatch warning
       setNetworkMismatch(true);
       toast.warning(`This number appears to be ${detectedNetwork}.`, {
         description: `${networkName} plans won't work with this number.`,
@@ -191,23 +185,21 @@ export function DataPlans() {
     }
   };
 
-  // Filter products based on selection with deduplication and sorting
   const filteredProducts = useMemo(() => {
     if (!selectedNetwork) return [];
 
-    // First filter by network and product type
     const networkProducts = products.filter((product: Product) => {
-      if (product.productType !== "data") return false;
+      if (product.productType !== productType) return false;
       if (product.operator?.name !== selectedNetwork) return false;
       return true;
     });
 
-    // Apply category filter using category.slug
-    const categoryFiltered = networkProducts.filter(
-      (product: Product) => product.category?.slug === selectedCategory
-    );
+    const categoryFiltered = showCategories
+      ? networkProducts.filter(
+          (product: Product) => product.category?.slug === selectedCategory
+        )
+      : networkProducts;
 
-    // CRITICAL: Deduplicate by product ID to prevent duplicates
     const seen = new Set<string>();
     const deduplicated = categoryFiltered.filter((product) => {
       if (seen.has(product.id)) {
@@ -217,7 +209,6 @@ export function DataPlans() {
       return true;
     });
 
-    // Sort by data size from small to large (MB to GB)
     const sorted = [...deduplicated].sort((a, b) => {
       const sizeMbA = a.dataMb || 0;
       const sizeMbB = b.dataMb || 0;
@@ -225,11 +216,15 @@ export function DataPlans() {
     });
 
     return sorted;
-  }, [products, selectedNetwork, selectedCategory]);
+  }, [
+    products,
+    productType,
+    selectedNetwork,
+    selectedCategory,
+    showCategories,
+  ]);
 
-  // Handle Plan Click
   const handlePlanClick = (product: Product) => {
-    // First, check if user explicitly entered a phone number (not just auto-filled)
     if (!isPhoneNumberExplicitlyEntered) {
       toast.error("Please enter a phone number before selecting a product.", {
         description: "We need a valid number to proceed.",
@@ -239,14 +234,12 @@ export function DataPlans() {
       return;
     }
 
-    // Then validate the phone number length
     if (!phoneNumber || phoneNumber.length < 11) {
       toast.error("Please enter a valid phone number first.");
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
 
-    // STRICT VALIDATION: Block if phone number doesn't match product's network
     const phoneNetwork = detectNetworkProvider(phoneNumber);
     const productNetwork = product.operator?.name;
 
@@ -270,16 +263,14 @@ export function DataPlans() {
     }
 
     setSelectedProduct(product);
-    setIsSuccess(false); // Reset success state
-    setIsFailed(false); // Reset failure state
+    setIsSuccess(false);
+    setIsFailed(false);
     setFailureMessage("");
 
-    // Get and set the markup percent for this product's supplier
     const supplierId = product.supplierOffers?.[0]?.supplierId || "";
     const markup = markupMap.get(supplierId) || 0;
     setSelectedMarkupPercent(markup);
 
-    // Track offer ID if product has an active offer and user is eligible
     if (product.activeOffer) {
       const isEligible = eligibleIds.has(product.activeOffer.id);
       setSelectedOfferId(isEligible ? product.activeOffer.id : null);
@@ -290,185 +281,98 @@ export function DataPlans() {
     setIsCheckoutOpen(true);
   };
 
-  // Handle Biometric Verification Success
   const handleBiometricSuccess = (verificationToken: string) => {
-    console.log("[DataPlans] Biometric verification successful");
-    // NOTE: We don't close the modal here anymore.
-    // The modal stays open in a loading state until the mutation completes.
-
-    // Update pending payment with verification token
     if (pendingPaymentData) {
       setPendingPaymentData({
         ...pendingPaymentData,
         verificationToken,
       });
 
-      // Proceed directly to payment (no PIN needed)
       proceedWithPayment(pendingPaymentData.useCashback, verificationToken);
     }
   };
 
-  // Handle Biometric Unavailable - Fall back to PIN
   const handleBiometricUnavailable = useCallback(() => {
-    console.log("[DataPlans] Biometric unavailable, falling back to PIN");
     setShowBiometricModal(false);
-    // Immediately show PIN modal - no delay to prevent background flash
     setShowPinModal(true);
   }, []);
 
-  // Handle no PIN setup - Show PIN setup modal
   const handleNoPinSetup = useCallback(() => {
-    console.log("[DataPlans] No PIN set up, showing PIN setup modal");
     setShowBiometricModal(false);
-    // Immediately show PIN setup modal - no delay to prevent background flash
     setShowPinSetupModal(true);
   }, []);
 
-  // Handle PIN setup success - Show PIN verification modal
   const handlePinSetupSuccess = useCallback(() => {
-    console.log(
-      "[DataPlans] PIN setup completed, now showing PIN verification modal"
-    );
     setShowPinSetupModal(false);
-    // Immediately show PIN modal - no delay to prevent background flash
     setShowPinModal(true);
-
-    // Refetch user to get updated hasPin status
     refetchUser();
   }, [refetchUser]);
 
-  // Handle PIN Entry Success
   const handlePinEntrySuccess = (pin: string) => {
-    console.log(
-      "[DataPlans] PIN verification successful, received PIN:",
-      pin ? "****" : "null"
-    );
-    setErrorMessage(""); // Clear previous errors
-    // NOTE: We don't close the modal here anymore.
-    // The modal stays open in a loading state until the mutation completes.
-    // setShowPinModal(false);
+    setErrorMessage("");
 
-    // Proceed with payment with PIN
     if (pendingPaymentData) {
-      console.log(
-        "[DataPlans] Found pendingPaymentData, proceeding with payment"
-      );
       proceedWithPayment(pendingPaymentData.useCashback, undefined, pin);
     } else {
-      console.error(
-        "[DataPlans] ERROR: No pendingPaymentData found in handlePinEntrySuccess"
-      );
-      setShowPinModal(false); // Close if no data
+      setShowPinModal(false);
     }
   };
 
-  // Handle Payment - Try Biometric First, PIN Fallback
   const handlePayment = (useCashback: boolean) => {
     if (!selectedProduct) return;
 
-    // Calculate the amount to display
-    const faceValue = parseFloat(selectedProduct.denomAmount || "0");
-    const supplierPrice = selectedProduct.supplierOffers?.[0]?.supplierPrice
-      ? parseFloat(selectedProduct.supplierOffers[0].supplierPrice)
-      : faceValue;
+    const basePrice =
+      getResolvedProductPrice(selectedProduct) ??
+      convertDenomAmountToNumber(selectedProduct.denomAmount);
 
-    // Get supplier markup
-    const supplierId = selectedProduct.supplierOffers?.[0]?.supplierId || "";
-    const markupPercent = markupMap.get(supplierId) || 0;
-
-    // Calculate selling price: supplierPrice + (supplierPrice * markup%)
-    // markupPercent can be either decimal (0.10) or percentage (10)
-    const actualMarkup =
-      markupPercent < 1 ? markupPercent : markupPercent / 100;
-    const sellingPrice = supplierPrice + supplierPrice * actualMarkup;
-
-    // Calculate payable amount
     const userCashbackBalance = user?.cashback?.availableBalance || 0;
     const payableAmount = useCashback
-      ? Math.max(0, sellingPrice - userCashbackBalance)
-      : sellingPrice;
+      ? Math.max(0, basePrice - userCashbackBalance)
+      : basePrice;
 
-    // Store pending payment data
     setPendingPaymentData({ useCashback, amount: payableAmount });
-
-    // Hide checkout modal while verification is in progress
     setIsCheckoutOpen(false);
-
-    // BIOMETRIC-FIRST FLOW
-    // Try biometric verification first, fall back to PIN if needed
-    console.log(
-      "[DataPlans] Starting verification flow - attempting biometric first"
-    );
     setShowBiometricModal(true);
   };
 
-  // Execute the actual payment
   const proceedWithPayment = (
     useCashback: boolean,
     verificationToken?: string,
     pin?: string
   ) => {
-    if (!selectedProduct) {
-      console.error(
-        "[DataPlans] ERROR: proceedWithPayment called but selectedProduct is null"
-      );
-      return;
-    }
+    if (!selectedProduct) return;
 
-    const amount = parseFloat(selectedProduct.denomAmount || "0");
+    const amount =
+      getResolvedProductPrice(selectedProduct) ??
+      convertDenomAmountToNumber(selectedProduct.denomAmount);
     const offer = selectedProduct.supplierOffers?.[0];
-
-    console.log("[DataPlans] Proceeding with payment", {
-      method: verificationToken ? "biometric" : "pin",
-      hasToken: !!verificationToken,
-      hasPin: !!pin,
-      amount,
-      productCode: selectedProduct.productCode,
-      offerId: offer?.mappingId,
-    });
 
     topupMutation.mutate(
       {
-        amount, // Send face value - backend handles discount calculation
+        amount,
         productCode: selectedProduct.productCode,
         recipientPhone: phoneNumber,
         supplierSlug: offer?.supplierSlug,
         supplierMappingId: offer?.mappingId,
         useCashback,
-        verificationToken, // Include verification token if biometric was used
-        pin, // Include PIN if PIN verification was used
-        offerId: selectedOfferId || undefined, // Include offer ID if eligible
+        verificationToken,
+        pin,
+        offerId: selectedOfferId || undefined,
       },
       {
         onSuccess: (response) => {
-          console.log(
-            "[DataPlans] Transaction Success - Full response:",
-            response
-          );
           setIsSuccess(true);
-          // Capture transaction ID for sharing - try multiple possible paths
-          // The API returns TopupResponse directly, and data contains the transaction details
-          console.log("[DataPlans] response.data object:", response.data);
-          console.log(
-            "[DataPlans] response.data keys:",
-            response.data ? Object.keys(response.data) : "no data"
-          );
           const txId =
             response.data?.transactionId ||
             response.data?.id ||
             response.data?.transaction_id ||
             response.data?.topupRequestId ||
             response.data?.requestId;
-          console.log("[DataPlans] Extracted transactionId:", txId);
           if (txId) {
             setLastTransactionId(txId);
-          } else {
-            console.warn("[DataPlans] No transaction ID found in response!");
           }
-          // Successful transaction = Reset PIN attempts if PIN was used
           if (pin) recordPinAttempt(true);
 
-          // Close BOTH modals and re-open checkout modal to show success state
           setShowPinModal(false);
           setShowBiometricModal(false);
           setIsCheckoutOpen(true);
@@ -477,13 +381,11 @@ export function DataPlans() {
           queryClient.invalidateQueries({ queryKey: ["auth", "current-user"] });
         },
         onError: (error: any) => {
-          console.error("[DataPlans] Transaction Failed", error);
           const msg =
             error?.response?.data?.message ||
             error?.message ||
             "Transaction failed. Please try again.";
 
-          // Check if it's a PIN error
           if (
             pin &&
             (msg.toLowerCase().includes("pin") ||
@@ -491,31 +393,26 @@ export function DataPlans() {
           ) {
             recordPinAttempt(false);
             setErrorMessage(msg);
-            // Keep PIN modal open to show error
           } else {
-            // Other error - close verification modals and show failure in checkout modal
             setShowPinModal(false);
             setShowBiometricModal(false);
             setIsFailed(true);
             setFailureMessage(msg);
-            setIsCheckoutOpen(true); // Show checkout modal with failure state
+            setIsCheckoutOpen(true);
           }
         },
       }
     );
   };
 
-  // Handle retry from failure modal
   const handleRetry = () => {
     setIsFailed(false);
     setFailureMessage("");
-    // Re-trigger the payment flow by reopening biometric modal
     if (pendingPaymentData) {
       setShowBiometricModal(true);
     }
   };
 
-  // Get logo for current selected network
   const currentLogo = operators.find(
     (op) => op.name === selectedNetwork
   )?.logoUrl;
@@ -542,7 +439,7 @@ export function DataPlans() {
 
       {/* Header & View Toggle */}
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Data Plans</h1>
+        <h1 className="text-xl font-bold">{title}</h1>
         <div className="flex gap-1 rounded-lg border p-1">
           <Button
             variant={viewMode === "grid" ? "secondary" : "ghost"}
@@ -579,12 +476,14 @@ export function DataPlans() {
       )}
 
       {/* Category Tabs */}
-      <CategoryTabs
-        categories={categories}
-        selectedCategory={selectedCategory || ""}
-        onSelect={setSelectedCategory}
-        isLoading={isCategoriesLoading}
-      />
+      {showCategories && (
+        <CategoryTabs
+          categories={categories}
+          selectedCategory={selectedCategory || ""}
+          onSelect={setSelectedCategory}
+          isLoading={isCategoriesLoading}
+        />
+      )}
 
       {/* Data Grid */}
       {isLoading ? (
@@ -627,7 +526,7 @@ export function DataPlans() {
         </div>
       )}
 
-      {/* Checkout Modal - Show initially or after mutation completes, hide during processing */}
+      {/* Checkout Modal */}
       {selectedProduct &&
         !showBiometricModal &&
         !showPinModal &&
@@ -652,12 +551,6 @@ export function DataPlans() {
             onShare={
               isSuccess
                 ? () => {
-                    console.log(
-                      "[DataPlans] Share clicked. lastTransactionId:",
-                      lastTransactionId,
-                      "isShareDialogOpen:",
-                      isShareDialogOpen
-                    );
                     setIsShareDialogOpen(true);
                   }
                 : undefined
@@ -665,7 +558,7 @@ export function DataPlans() {
           />
         )}
 
-      {/* Biometric Verification Modal - Biometric First */}
+      {/* Biometric Verification Modal */}
       <BiometricVerificationModal
         open={showBiometricModal}
         onClose={() => {
@@ -681,7 +574,7 @@ export function DataPlans() {
         isVerifying={topupMutation.isPending}
       />
 
-      {/* PIN Verification Modal - Fallback if Biometric Fails */}
+      {/* PIN Verification Modal */}
       <PinVerificationModal
         open={showPinModal}
         onClose={() => {
@@ -699,12 +592,12 @@ export function DataPlans() {
         errorMessage={errorMessage}
         onForgotPin={() =>
           router.push(
-            "/dashboard/profile/security/pin?returnUrl=/dashboard/data"
+            `/dashboard/profile/security/pin?returnUrl=${encodeURIComponent(returnUrl)}`
           )
         }
       />
 
-      {/* PIN Setup Modal - If user hasn't set up PIN yet */}
+      {/* PIN Setup Modal */}
       <PinSetupModal
         isOpen={showPinSetupModal}
         onClose={() => {
@@ -714,7 +607,7 @@ export function DataPlans() {
         onSuccess={handlePinSetupSuccess}
       />
 
-      {/* Share Dialog - uses lastTransactionId to fetch and share */}
+      {/* Share Dialog */}
       {lastTransactionId && (
         <ShareDialogWithTransaction
           transactionId={lastTransactionId}
@@ -726,7 +619,6 @@ export function DataPlans() {
   );
 }
 
-// Separate component to fetch transaction data for sharing
 function ShareDialogWithTransaction({
   transactionId,
   isOpen,

@@ -4,8 +4,11 @@
  */
 
 import apiClient from "@/lib/api-client";
+import { isAxiosError } from "axios";
 import {
   ChartData,
+  DailyBillPaymentSnapshotResponse,
+  DailyProductSnapshotResponse,
   DailyMetric,
   DailyMetricsParams,
   DateRangeParams,
@@ -140,6 +143,47 @@ export const adminAnalyticsService = {
       `${BASE_PATH}/daily-metrics`,
       { params }
     );
+    return response.data;
+  },
+
+  /**
+   * Get date-range product performance snapshots for topups
+   */
+  getTopupProductDailySnapshot: async (
+    params: DateRangeParams
+  ): Promise<ApiResponse<DailyProductSnapshotResponse>> => {
+    try {
+      const response = await apiClient.get<
+        ApiResponse<DailyProductSnapshotResponse>
+      >(`${BASE_PATH}/topup/products/daily-snapshot`, {
+        params,
+      });
+      return response.data;
+    } catch (error) {
+      if (isAxiosError(error) && error.response?.status === 404) {
+        const fallbackResponse = await apiClient.get<
+          ApiResponse<DailyProductSnapshotResponse>
+        >(`${BASE_PATH}/topups/products/daily-snapshot`, {
+          params,
+        });
+        return fallbackResponse.data;
+      }
+
+      throw error;
+    }
+  },
+
+  /**
+   * Get date-range bill/cable payment performance snapshots
+   */
+  getBillPaymentDailySnapshot: async (
+    params: DateRangeParams
+  ): Promise<ApiResponse<DailyBillPaymentSnapshotResponse>> => {
+    const response = await apiClient.get<
+      ApiResponse<DailyBillPaymentSnapshotResponse>
+    >(`${BASE_PATH}/bill-payments/daily-snapshot`, {
+      params,
+    });
     return response.data;
   },
 

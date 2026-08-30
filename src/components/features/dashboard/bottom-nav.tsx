@@ -7,11 +7,11 @@ import { cn } from "@/lib/utils";
 import {
   Briefcase,
   Clock,
+  HandCoins,
   Home,
   Sparkles,
   Trophy,
   User,
-  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -19,7 +19,7 @@ import { useEffect, useState } from "react";
 
 const baseNavItems = [
   { label: "Home", icon: Home, href: "/dashboard" },
-  { label: "Referral", icon: Users, href: "/dashboard/referrals" },
+  { label: "Agent", icon: HandCoins, href: "/dashboard/agent" },
   { label: "Rewards", icon: Trophy, href: "/dashboard/rewards" },
   { label: "Profile", icon: User, href: "/dashboard/profile" },
 ];
@@ -37,16 +37,13 @@ export function BottomNav() {
   const { getStatus, clearPending } = useResellerUpgradeStatus();
   const [hasPendingUpgrade, setHasPendingUpgrade] = useState(false);
 
-  // Show "Become a Reseller" only for regular users
   const showBecomeReseller = user?.role === "user";
   const isReseller = user?.role === "reseller";
 
-  // Build nav items based on user role
   const navItems = isReseller
     ? [...baseNavItems.slice(0, 2), resellerNavItem, ...baseNavItems.slice(2)]
     : baseNavItems;
 
-  // Check pending status on mount and clear if user is now reseller
   useEffect(() => {
     if (isReseller) {
       clearPending();
@@ -57,7 +54,6 @@ export function BottomNav() {
     }
   }, [isReseller, getStatus, clearPending]);
 
-  // Check if current path is a reseller-related page
   const isResellerPath = pathname.startsWith("/dashboard/reseller");
 
   return (
@@ -66,7 +62,6 @@ export function BottomNav() {
         {/* Become a Reseller Banner - Mobile */}
         {showBecomeReseller &&
           (hasPendingUpgrade ? (
-            // Pending state
             <div className="flex w-full items-center justify-center gap-2 bg-zinc-100 px-4 py-2 text-sm font-medium dark:bg-zinc-800">
               <Clock className="size-4 text-zinc-500" />
               <span className="text-zinc-600 dark:text-zinc-400">
@@ -74,13 +69,12 @@ export function BottomNav() {
               </span>
             </div>
           ) : (
-            // Active state
             <button
               onClick={() => setShowResellerModal(true)}
-              className="flex w-full items-center justify-center gap-2 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-2 text-sm font-medium transition-all hover:from-amber-100 hover:to-orange-100 dark:from-amber-950/50 dark:to-orange-950/50"
+              className="flex w-full items-center justify-center gap-2 bg-gradient-to-r from-emerald-50 to-teal-50 px-4 py-2 text-sm font-medium transition-all hover:from-emerald-100 hover:to-teal-100 dark:from-emerald-950/50 dark:to-teal-950/50"
             >
-              <Sparkles className="size-4 text-amber-600 dark:text-amber-400" />
-              <span className="text-amber-900 dark:text-amber-100">
+              <Sparkles className="size-4 text-emerald-600 dark:text-emerald-400" />
+              <span className="text-emerald-900 dark:text-emerald-100">
                 Become a Reseller — Get 10% OFF
               </span>
             </button>
@@ -94,7 +88,6 @@ export function BottomNav() {
           )}
         >
           {navItems.map((item) => {
-            // For Reseller tab, check if path starts with /dashboard/reseller
             const isActive =
               item.href === "/dashboard/reseller"
                 ? isResellerPath
@@ -108,7 +101,7 @@ export function BottomNav() {
                   "flex flex-col items-center gap-1 text-xs font-medium",
                   isActive ? "text-primary" : "text-muted-foreground",
                   item.label === "Reseller" &&
-                    "relative after:absolute after:-top-1 after:right-1/4 after:size-1.5 after:rounded-full after:bg-amber-500"
+                    "relative after:absolute after:-top-1 after:right-1/4 after:size-1.5 after:rounded-full after:bg-emerald-500"
                 )}
               >
                 <item.icon className="size-5" />
@@ -124,7 +117,6 @@ export function BottomNav() {
         open={showResellerModal}
         onOpenChange={(open) => {
           setShowResellerModal(open);
-          // Refresh pending status when modal closes
           if (!open) {
             const status = getStatus();
             setHasPendingUpgrade(status.pending);

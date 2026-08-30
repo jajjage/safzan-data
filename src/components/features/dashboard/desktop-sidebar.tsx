@@ -13,6 +13,7 @@ import {
   BarChart3,
   Clock,
   FileUp,
+  HandCoins,
   Home,
   Key,
   Link2,
@@ -21,7 +22,6 @@ import {
   TerminalSquare,
   Trophy,
   User,
-  Users,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -30,13 +30,12 @@ import { useEffect, useState } from "react";
 
 const navItems = [
   { label: "Home", icon: Home, href: "/dashboard" },
-  { label: "Referral", icon: Users, href: "/dashboard/referrals" },
+  { label: "Agent", icon: HandCoins, href: "/dashboard/agent" },
   { label: "Rewards", icon: Trophy, href: "/dashboard/rewards" },
   { label: "Profile", icon: User, href: "/dashboard/profile" },
 ];
 
 const resellerItems = [
-  // { label: "Reseller Hub", icon: Store, href: "/dashboard/reseller" },
   { label: "Bulk Topup", icon: FileUp, href: "/dashboard/reseller/bulk-topup" },
 ];
 
@@ -71,7 +70,6 @@ export function DesktopSidebar({ className }: { className?: string }) {
   const showBecomeReseller = user?.role === "user";
   const hasPendingUpgrade = !isReseller && getStatus().pending;
 
-  // If user became reseller, remove stale "pending" local flag.
   useEffect(() => {
     if (isReseller) {
       clearPending();
@@ -168,7 +166,6 @@ export function DesktopSidebar({ className }: { className?: string }) {
             <>
               <Separator className="my-2" />
               {hasPendingUpgrade ? (
-                // Pending state - user already submitted
                 <div className="flex items-center gap-3 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm font-medium dark:border-zinc-700 dark:bg-zinc-800/50">
                   <Clock className="size-5 text-zinc-500" />
                   <div className="flex flex-col">
@@ -181,7 +178,6 @@ export function DesktopSidebar({ className }: { className?: string }) {
                   </div>
                 </div>
               ) : (
-                // Active state - user can submit
                 <button
                   onClick={() => setShowResellerModal(true)}
                   className="flex items-center gap-3 rounded-lg border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-3 py-3 text-sm font-medium transition-all hover:shadow-sm dark:border-amber-800 dark:from-amber-950/30 dark:to-orange-950/30"
@@ -208,7 +204,6 @@ export function DesktopSidebar({ className }: { className?: string }) {
         </div>
       </div>
 
-      {/* Become a Reseller Modal */}
       <BecomeResellerModal
         open={showResellerModal}
         onOpenChange={(open) => setShowResellerModal(open)}

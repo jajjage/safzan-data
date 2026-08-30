@@ -47,7 +47,7 @@ export interface TransactionOverview {
     successful: number;
     failed: number;
     pending: number;
-    reversed: number;
+    reversed?: number;
     processing: number;
   };
 }
@@ -122,23 +122,161 @@ export interface RechartsDataPoint {
 export interface TodaySnapshot {
   transactions: {
     count: number;
+    attemptedCount?: number;
+    volume: number;
+    attemptedVolume?: number;
+
+    profit: number;
+    successful: number;
+    successCount?: number;
+    failed: number;
+    failedCount?: number;
+    pending: number;
+    pendingCount?: number;
+    reversed?: number;
+    reversedCount?: number;
+  };
+  billPayments?: {
+    attemptedCount?: number;
+    attemptedVolume?: number;
+    count: number;
     volume: number;
     profit: number;
     successful: number;
+    successCount?: number;
     failed: number;
+    failedCount?: number;
     pending: number;
+    pendingCount?: number;
+    reversed?: number;
+    reversedCount?: number;
+    electricityCount: number;
+    electricityVolume: number;
+    cableCount: number;
+    cableVolume: number;
   };
   newUsers: number;
   activeUsers: number;
   walletDeposits: number;
   walletWithdrawals: number;
+  paymentReceivedCount?: number;
+  paymentReceivedAmount?: number;
   revenueEstimate: number;
   comparedToYesterday: {
     transactionsDelta: number;
     transactionsDeltaPercent: string;
+    attemptedTransactionsDelta?: number;
+    attemptedTransactionsDeltaPercent?: string;
+    successfulTransactionsDelta?: number;
+    successfulTransactionsDeltaPercent?: string;
+    failedTransactionsDelta?: number;
+    failedTransactionsDeltaPercent?: string;
+    pendingTransactionsDelta?: number;
+    pendingTransactionsDeltaPercent?: string;
+    reversedTransactionsDelta?: number;
+    reversedTransactionsDeltaPercent?: string;
+    billPaymentsDelta?: number;
+    billPaymentsDeltaPercent?: string;
+    successfulBillPaymentsDelta?: number;
+    successfulBillPaymentsDeltaPercent?: string;
+    billPaymentVolumeDelta?: number;
+    billPaymentVolumeDeltaPercent?: string;
+
     volumeDelta: number;
     volumeDeltaPercent: string;
+    paymentReceivedCountDelta?: number;
+    paymentReceivedCountDeltaPercent?: string;
+    paymentReceivedAmountDelta?: number;
+    paymentReceivedAmountDeltaPercent?: string;
   };
+}
+
+export interface ProductSalesRow {
+  productId: string;
+  productCode: string | null;
+  productName: string;
+  productType: string;
+  productSlug: string | null;
+  operatorName: string;
+  successfulCount: number;
+  totalAmount: number;
+}
+
+export interface DailyProductSnapshot {
+  date: string;
+  totalSuccessfulTopups: number;
+  totalReceivedTransactions: number;
+  bestPerformingProduct: ProductSalesRow | null;
+  products: ProductSalesRow[];
+}
+
+export interface DailyProductSnapshotResponse {
+  period: {
+    from: string;
+    to: string;
+  };
+  summary: {
+    totalSuccessfulTopups: number;
+    totalReceivedTransactions: number;
+    topProducts: ProductSalesRow[];
+  };
+  dailySnapshots: DailyProductSnapshot[];
+}
+
+export interface BillPaymentBillerSnapshot {
+  billerId: string;
+  billerCode: string;
+  billerName: string;
+  categoryType: "electricity" | "cable";
+  categoryName: string;
+  supplierSlug?: string | null;
+  attemptedCount: number;
+  attemptedAmount: number;
+  successfulCount: number;
+  totalAmount: number;
+  failedCount: number;
+  pendingCount: number;
+  reversedCount: number;
+  profit: number;
+}
+
+export interface DailyBillPaymentSnapshot {
+  date: string;
+  totalAttemptedPayments: number;
+  totalSuccessfulPayments: number;
+  totalFailedPayments: number;
+  totalPendingPayments: number;
+  totalReversedPayments: number;
+  totalAmount: number;
+  totalAttemptedAmount: number;
+  totalProfit: number;
+  electricity: { count: number; amount: number };
+  cable: { count: number; amount: number };
+  bestPerformingBiller: Pick<
+    BillPaymentBillerSnapshot,
+    | "billerId"
+    | "billerCode"
+    | "billerName"
+    | "categoryType"
+    | "successfulCount"
+    | "totalAmount"
+  > | null;
+  billers: BillPaymentBillerSnapshot[];
+}
+
+export interface DailyBillPaymentSnapshotResponse {
+  period: {
+    from: string;
+    to: string;
+  };
+  summary: {
+    totalAttemptedPayments: number;
+    totalSuccessfulPayments: number;
+    totalAmount: number;
+    totalProfit: number;
+    topBillers: BillPaymentBillerSnapshot[];
+  };
+  dailySnapshots: DailyBillPaymentSnapshot[];
 }
 
 // 8. Daily Metrics Time Series
@@ -151,9 +289,9 @@ export interface DailyMetric {
   transactions: {
     count: number;
     volume: number;
-    successCount: number;
-    failedCount: number;
-    reversedCount: number;
+    successCount?: number;
+    failedCount?: number;
+    reversedCount?: number;
   };
   users: {
     newRegistrations: number;

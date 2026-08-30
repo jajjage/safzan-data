@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { useRegister } from "@/hooks/useAuth";
-import { useValidateReferralCode } from "@/hooks/useReferrals";
+import { useValidateAgentCode } from "@/hooks/useAgent";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSearchParams } from "next/navigation";
 import { useForm, type Resolver } from "react-hook-form";
@@ -36,11 +36,7 @@ const registerSchema = z
           const digitsOnly = val.replace(/\D/g, "");
           // Must be exactly 11 digits
           if (digitsOnly.length !== 11) return false;
-          // Must start with valid Nigerian prefixes (0 followed by valid network codes)
-          // MTN: 0803, 0806, 0703, 0706, 0813, 0816, 0810, 0814, 0903, 0906, 0913, 0916
-          // Airtel: 0802, 0808, 0701, 0708, 0812, 0902, 0907, 0912, 0901
-          // Glo: 0805, 0807, 0705, 0815, 0811, 0905, 0915
-          // 9mobile: 0809, 0817, 0818, 0909, 0908
+          // Must start with valid Nigerian prefixes
           const validPrefixes = /^0(70[1-9]|80[1-9]|81[0-8]|90[1-9]|91[0-6])/;
           return validPrefixes.test(digitsOnly);
         },
@@ -49,7 +45,7 @@ const registerSchema = z
             "Please enter a valid Nigerian phone number (e.g., 08012345678)",
         }
       ),
-    referralCode: z.string().optional(),
+    agentCode: z.string().optional(),
     password: z.preprocess(
       (val) => (typeof val === "string" ? val.trim() : val),
       z
@@ -72,12 +68,14 @@ export function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const searchParams = useSearchParams();
-  const urlCode = searchParams.get("code") || searchParams.get("ref");
+  const urlCode =
+    searchParams.get("agentCode") ||
+    searchParams.get("code") ||
+    searchParams.get("ref");
 
   const registerMutation = useRegister();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { mutateAsync: validateCode, isPending: isValidating } =
-    useValidateReferralCode();
+    useValidateAgentCode();
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(
@@ -88,7 +86,7 @@ export function RegisterForm() {
       fullName: "",
       email: "",
       phoneNumber: "",
-      referralCode: urlCode || "",
+      agentCode: urlCode?.toUpperCase() || "",
       password: "",
       confirmPassword: "",
     },
@@ -97,32 +95,40 @@ export function RegisterForm() {
   const {
     register,
     handleSubmit,
+    setError,
     setValue,
     formState: { isValid, errors },
   } = form;
 
-  // Update referralCode if URL changes
+  // Update agent code if URL changes
   useEffect(() => {
     if (urlCode) {
-      setValue("referralCode", urlCode);
+      setValue("agentCode", urlCode.toUpperCase());
     }
   }, [urlCode, setValue]);
 
   const onSubmit = async (data: RegisterFormValues) => {
     const { confirmPassword: _confirmPassword, ...rest } = data;
 
-    // TODO: Re-enable when referrals feature is ready
-    // Validate referral code if provided
-    // if (rest.referralCode) {
-    //   try {
-    //     await validateCode(rest.referralCode);
-    //   } catch (error: any) {
-    //     setError("referralCode", {
-    //       message: error.response?.data?.message || "Invalid referral code",
-    //     });
-    //     return;
-    //   }
-    // }
+    const normalizedAgentCode = rest.agentCode?.trim().toUpperCase();
+    if (normalizedAgentCode) {
+      try {
+        const result = await validateCode(normalizedAgentCode);
+        const isValid =
+          result.data?.isValid ?? (result.data as any)?.valid ?? false;
+        if (!isValid) {
+          setError("agentCode", { message: "Invalid agent code" });
+          return;
+        }
+      } catch (error: any) {
+        setError("agentCode", {
+          message:
+            error.response?.data?.message ||
+            "Could not validate this agent code. Please try again.",
+        });
+        return;
+      }
+    }
 
     // Normalize phone number (strip non-digits)
     const normalizedPhone = rest.phoneNumber.replace(/\D/g, "");
@@ -132,7 +138,7 @@ export function RegisterForm() {
       password: rest.password,
       phoneNumber: normalizedPhone,
       fullName: rest.fullName,
-      // referralCode: rest.referralCode, // Disabled - referrals Coming Soon
+      agentCode: normalizedAgentCode || undefined,
     };
 
     // Store password in sessionStorage temporarily for auto-fill on login page
@@ -142,17 +148,14 @@ export function RegisterForm() {
     try {
       await registerMutation.mutateAsync(dataToSend);
     } catch (err: any) {
-      // Defensive parsing of server validation errors and surface them in the form
       const error = err as AxiosError<any>;
       const errorData = error.response?.data;
 
       console.error("[RegisterForm] Registration error", errorData || error);
 
-      // If server returned details as object mapping fields to messages
       if (errorData?.details && typeof errorData.details === "object") {
         Object.entries(errorData.details).forEach(([field, msg]) => {
           try {
-            // Only set known fields
             if (field === "password" || field === "confirmPassword") {
               form.setError("password", { message: String(msg) });
             } else if (field === "email") {
@@ -162,7 +165,6 @@ export function RegisterForm() {
             } else if (field === "fullName") {
               form.setError("fullName", { message: String(msg) });
             } else {
-              // set generic form-level toast for unknown fields
               toast.error(`${field}: ${msg}`);
             }
           } catch (e) {
@@ -180,11 +182,9 @@ export function RegisterForm() {
         return;
       }
 
-      // If server returned an array of errors
       if (Array.isArray(errorData?.errors) && errorData.errors.length > 0) {
         errorData.errors.forEach((e: any) => {
           const msg = typeof e === "string" ? e : e.message || e.msg || e;
-          // Heuristic field assignment
           if (/(password)/i.test(msg)) {
             form.setError("password", { message: String(msg) });
           } else if (/(email)/i.test(msg)) {
@@ -198,13 +198,11 @@ export function RegisterForm() {
         return;
       }
 
-      // If server returned a single message string
       const singleMessage =
         errorData?.message ||
         errorData?.error ||
         (typeof errorData === "string" ? errorData : null);
       if (singleMessage) {
-        // Try to attach to password if it mentions password, else show toast
         if (/(password)/i.test(String(singleMessage))) {
           form.setError("password", { message: String(singleMessage) });
         } else {
@@ -213,7 +211,6 @@ export function RegisterForm() {
         return;
       }
 
-      // Persist last registration error so it can be shown after a page refresh
       try {
         if (typeof window !== "undefined") {
           sessionStorage.setItem(
@@ -221,16 +218,12 @@ export function RegisterForm() {
             JSON.stringify(errorData || { message: String(error?.message) })
           );
         }
-      } catch (e) {
-        /* ignore storage errors */
-      }
+      } catch (e) {}
 
-      // Fallback: generic toast
       toast.error("Registration failed. Please try again.");
     }
   };
 
-  // On mount, rehydrate last registration error (if any) to show after refresh
   useEffect(() => {
     if (typeof window === "undefined") return;
     const raw = sessionStorage.getItem("registrationLastError");
@@ -253,9 +246,7 @@ export function RegisterForm() {
             } else {
               toast.error(`${field}: ${msg}`);
             }
-          } catch (e) {
-            /* ignore */
-          }
+          } catch (e) {}
         });
       } else if (
         Array.isArray(errorData?.errors) &&
@@ -287,10 +278,8 @@ export function RegisterForm() {
         e
       );
     }
-    // do not clear here; clear when user starts editing
   }, [form]);
 
-  // Clear persisted error when user starts typing to avoid stale messages
   useEffect(() => {
     if (typeof window === "undefined") return;
     const handler = () => {
@@ -298,9 +287,7 @@ export function RegisterForm() {
         if (sessionStorage.getItem("registrationLastError")) {
           sessionStorage.removeItem("registrationLastError");
         }
-      } catch {
-        /* ignore */
-      }
+      } catch {}
     };
 
     document.addEventListener("input", handler);
@@ -351,21 +338,26 @@ export function RegisterForm() {
               </p>
             )}
           </div>
-          {/* TODO: Re-enable when referrals feature is ready
           <div className="grid gap-2">
-            <Label htmlFor="referralCode">Referral Code (Optional)</Label>
+            <Label htmlFor="agentCode">Agent Code (Optional)</Label>
             <Input
-              id="referralCode"
-              placeholder="e.g. JOHND123"
-              {...register("referralCode")}
+              id="agentCode"
+              placeholder="e.g. AG123ABC"
+              {...register("agentCode", {
+                onChange: (event) => {
+                  event.target.value = event.target.value.toUpperCase();
+                },
+              })}
             />
-            {errors.referralCode && (
-              <p className="text-sm text-red-500">
-                {errors.referralCode.message}
+            {urlCode && !errors.agentCode && (
+              <p className="text-muted-foreground text-sm">
+                Agent code applied from your invite link.
               </p>
             )}
+            {errors.agentCode && (
+              <p className="text-sm text-red-500">{errors.agentCode.message}</p>
+            )}
           </div>
-          */}
           <div className="grid gap-2">
             <Label htmlFor="password">Password</Label>
             <div className="relative">

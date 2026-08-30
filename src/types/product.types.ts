@@ -41,6 +41,12 @@ export interface Product {
   name: string;
   productType: "airtime" | "data" | string;
   denomAmount: string;
+  priceTags?: {
+    user?: number;
+    reseller?: number;
+    api?: number;
+  };
+  resolvedPrice?: number;
   minAmount?: number;
   maxAmount?: number;
   dataMb: number | null;
@@ -75,7 +81,8 @@ export interface ProductsResponseData {
 
 export interface ProductQueryParams {
   page?: number;
-  productType?: "airtime" | "data" | "bill";
+  limit?: number;
+  productType?: string;
   operatorId?: string;
   search?: string;
   isActive?: boolean;

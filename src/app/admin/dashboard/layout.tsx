@@ -18,22 +18,27 @@ import {
 } from "@/components/ui/sidebar";
 import { useAuth, useLogout } from "@/hooks/useAuth";
 import {
+  AlertTriangleIcon,
   BarChart3Icon,
   BellIcon,
   BriefcaseIcon,
   CreditCardIcon,
   FileTextIcon,
   FingerprintIcon,
+  FolderTreeIcon,
   GiftIcon,
+  HandCoinsIcon,
   HomeIcon,
   LandmarkIcon,
   LogOutIcon,
+  MegaphoneIcon,
   PackageIcon,
   PercentIcon,
   RadioIcon,
   ServerIcon,
   ShieldCheckIcon,
   ShieldIcon,
+  TvIcon,
   UsersIcon,
   WalletIcon,
   WebhookIcon,
@@ -53,6 +58,21 @@ const navItems = [
     icon: BarChart3Icon,
   },
   {
+    title: "Supplier Errors",
+    href: "/admin/dashboard/supplier-errors",
+    icon: AlertTriangleIcon,
+  },
+  {
+    title: "Announcements",
+    href: "/admin/dashboard/announcements",
+    icon: MegaphoneIcon,
+  },
+  {
+    title: "Categories",
+    href: "/admin/dashboard/categories",
+    icon: FolderTreeIcon,
+  },
+  {
     title: "Audit Log",
     href: "/admin/dashboard/audit-log",
     icon: FileTextIcon,
@@ -63,6 +83,11 @@ const navItems = [
     icon: UsersIcon,
   },
   {
+    title: "Agents",
+    href: "/admin/dashboard/agents",
+    icon: HandCoinsIcon,
+  },
+  {
     title: "Transactions",
     href: "/admin/dashboard/transactions",
     icon: CreditCardIcon,
@@ -71,6 +96,11 @@ const navItems = [
     title: "Topups",
     href: "/admin/dashboard/topups",
     icon: WalletIcon,
+  },
+  {
+    title: "Bills & Cable",
+    href: "/admin/dashboard/bills",
+    icon: TvIcon,
   },
   {
     title: "Webhooks",
@@ -118,6 +148,16 @@ const navItems = [
     icon: PackageIcon,
   },
   {
+    title: "Agent Products",
+    href: "/admin/dashboard/agent-products",
+    icon: PercentIcon,
+  },
+  {
+    title: "Agent Withdrawals",
+    href: "/admin/dashboard/agent-withdrawals",
+    icon: LandmarkIcon,
+  },
+  {
     title: "Offers",
     href: "/admin/dashboard/offers",
     icon: GiftIcon,
@@ -137,11 +177,6 @@ const navItems = [
     href: "/admin/dashboard/roles",
     icon: ShieldIcon,
   },
-  // {
-  //   title: "Settings",
-  //   href: "/admin/dashboard/settings",
-  //   icon: SettingsIcon,
-  // },
 ];
 
 export default function AdminDashboardLayout({
